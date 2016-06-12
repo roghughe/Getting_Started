@@ -13,7 +13,7 @@ using eclipse - which just happends to be my favourite.
 4) Install the goclipse IDE plugin: https://github.com/GoClipse/goclipse Install by selecting Install New Software and 
    creating an entry for: Go - http://goclipse.github.io/releases/. When selecting options, select the Go and basic CDT 
    options (selecting all causes the install to fail).
-5) Make sure you have the git commandline tools installed.
+5) Make sure you have the git commandline tools installed as the go command uses them.
 
 
 Handy hints can be found at:
