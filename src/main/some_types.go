@@ -6,6 +6,7 @@ This takes look at types - and is based upon https://www.golang-book.com/books/i
 
 import (
 	"fmt"
+	"math"
 )
 
 /**
