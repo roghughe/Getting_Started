@@ -107,3 +107,123 @@ func DemoCalcAreaOfCircleUsingMethod() {
 	// accesses c vi the method
 	fmt.Println(c.area)
 }
+
+/**
+Also consider a similar thing with a Rectangle
+*/
+type Rectangle struct {
+	x1, y1, x2, y2 float64
+}
+
+func distance(x1, y1, x2, y2 float64) float64 {
+	a := x2 - x1
+	b := y2 - y1
+	return math.Sqrt(a*a + b*b)
+}
+
+/** Method for an area of a rectangle */
+func (r *Rectangle) area() float64 {
+	l := distance(r.x1, r.y1, r.x1, r.y2)
+	w := distance(r.x1, r.y1, r.x2, r.y1)
+	return l * w
+}
+
+func calcAreaOfRectangle() {
+
+	r := Rectangle{0, 0, 10, 10}
+	fmt.Println(r.area())
+}
+
+var r Rectangle
+
+/**
+This bit covers embedded types
+*/
+
+/**
+Define a Person struct with a Talk() method
+*/
+type Person struct {
+	Name string
+}
+
+func (p *Person) Talk() {
+	fmt.Println("Hi, my name is", p.Name)
+}
+
+/**
+We could now create an Android struct that HAS A Person
+*/
+
+type Android struct {
+	// HAS A person
+	Person Person
+	Model  string
+}
+
+var a1 Android
+
+func AndriodHASATalk() {
+	a1 := new(Android)
+	a1.Person.Talk()
+}
+
+/**
+If we wanted an IS A (inheritance) relationship between the two structs - then use embedded types
+*/
+type Android2 struct {
+	Person
+	Model string
+}
+
+var a2 Android2
+
+/**
+Note that we don't need to reference the 'Person'
+The is-a relationship works this way intuitively: People can talk,
+an android is a person, therefore an android can talk.
+*/
+
+func AndriodISATalk() {
+	a2 := new(Android2)
+	a2.Talk()
+}
+
+/**** Interfaces ****/
+
+/** Interfaces - the same as structs, but contain method sets.A method set is a list of methods
+that a type must have in order to “implement” the interface. */
+type Shape interface {
+	area() float64
+}
+
+/* In our case both Rectangle and Circle have area methods which return float64s so
+both types implement the Shape interface. By itself this wouldn't be particularly useful,
+but we can use interface types as arguments to functions: */
+
+func totalArea(shapes ...Shape) float64 {
+	var area float64
+	for _, s := range shapes {
+		area += s.area()
+	}
+	return area
+}
+
+func PrintTotalArea() {
+
+	fmt.Println(totalArea(&c, &r))
+}
+
+/** Interfaces can also be used as fields: */
+type MultiShape struct {
+	shapes []Shape
+}
+
+/** We can even turn MultiShape itself into a Shape by giving it an area method: */
+func (m *MultiShape) area() float64 {
+	var area float64
+	for _, s := range m.shapes {
+		area += s.area()
+	}
+	return area
+}
