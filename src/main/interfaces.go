@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 )
@@ -42,4 +43,38 @@ func DemoInterfaces() {
 	// a = v
 
 	fmt.Println(a.Abs())
+}
+
+//===================================================================================
+//
+//===================================================================================
+
+/** This is an interface defintion for a Dummy struct */
+type HttpResponseFetcher interface {
+	Fetch(url string) ([]byte, error)
+}
+
+// Dummy
+type Fetcher struct{}
+
+func (Fetcher) Fetch(url string) ([]byte, error) {
+	return nil, nil
+}
+
+func populateInfo(fetcher HttpResponseFetcher, parsedInfo *Info) error {
+	response, err := fetcher.Fetch("http://example.com/info")
+
+	if err == nil {
+		err = json.Unmarshal(response, parsedInfo)
+
+		if err == nil {
+			return nil
+		}
+	}
+
+	return err
+}
+
+type Info struct {
+	str string
 }
