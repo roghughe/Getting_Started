@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -26,6 +29,7 @@ var info *Info
 var stub stubFetcher
 
 func TestXYZ(t *testing.T) {
+	fmt.Println("TestXYZ - - Running")
 	// We would make some assertions around this:
-	populateInfo(stubFetcher, info)
+	populateInfo(stub, info)
 }
