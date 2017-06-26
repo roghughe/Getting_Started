@@ -2,7 +2,7 @@ Getting Started With Go
 =======================
 
 This project contains a few notes on getting started with GO, based around setting up a development environment 
-using eclipse - which just happends to be my favourite.
+using eclipse - which used to be favourite Golang IDE.
 
 1) This has been done using a new eclipse install. Therefore install java for eclipse. 
    I put it in /users/Roger/eclipse-Go

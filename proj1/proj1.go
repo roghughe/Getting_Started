@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"time"
+
+	"gsamples/language"
 )
 
 func main() {
@@ -14,7 +16,7 @@ func main() {
 	channel3_channel_close()
 	channelSelect()
 	defaultSelect()
-	DemoInterfaces()
+	language.DemoInterfaces()
 }
 
 /**
