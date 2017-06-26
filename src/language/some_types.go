@@ -1,4 +1,4 @@
-package main
+package language
 
 /**
 This takes look at types - and is based upon https://www.golang-book.com/books/intro/9
