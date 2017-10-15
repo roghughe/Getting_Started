@@ -14,24 +14,21 @@ import (
 )
  const (
  	cookieName = "test"
- 	header = "Set-Cookie"
  )
 
 var (
 	key = []byte("the-key-has-to-be-32-bytes-long!")
-
-
 )
 
 
 // This is an example of how to encrypt a struct and attach it to a cookie
 
 
-type UserRights struct {
+type UserRoles struct {
 	username string   	// This is the user's name
 	// define the user's roles
-	admin    bool		// These are the roles - this user has admin rights
-	edit     bool       // The user has edit rights
+	admin    bool		// These are the roles - this user has admin roles
+	edit     bool       // The user has edit roles
 	user     bool		// This is an ordinary user
 }
 
@@ -48,9 +45,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// validate the password
 	if validateUser(username,password) {
 
-		// Get the user's rights
-		rights := getRights(username)
-		cookieValue, err := encrypt(rights)
+		// Get the user's roles
+		roles := getRoles(username)
+		cookieValue, err := encrypt(roles)
 		if err != nil {
 			// okay handle this - redirect the user to an error page
 			fmt.Fprintf(w, "Error creating the cookie, %s ",err.Error())
@@ -82,11 +79,11 @@ func validateUser(username, password string) bool {
 }
 
 // Figure out what this user has access to
-func getRights(username string) *UserRights {
+func getRoles(username string) *UserRoles {
 
 	// This may go to a database here
 	// In this case they're fudged
-	return &UserRights{
+	return &UserRoles{
 		username: username,
 		admin: true,
 		edit:  true,
@@ -95,9 +92,9 @@ func getRights(username string) *UserRights {
 }
 
 // This is boilerplate code
-func encrypt(rights *UserRights) ([]byte, error) {
+func encrypt(roles *UserRoles) ([]byte, error) {
 
-	b, err := json.Marshal(rights)
+	b, err := json.Marshal(roles)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
 		return nil, err;
@@ -125,7 +122,7 @@ func encrypt(rights *UserRights) ([]byte, error) {
 // This is a handler func - decide what to server the user based on roles
 func SomeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
-	userRights, err := validateRequest(&w,r)
+	userRoles, err := validateRequest(&w,r)
 	if err == http.ErrNoCookie {
 		// Display the login page - the cookie doesn't exist
 		fmt.Fprintf(w, "Please Login")
@@ -135,14 +132,14 @@ func SomeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// OKAY at this point diplay the page + data the user's after
-	// Check the rights and display whatever data is necessary eg:
-	if userRights.admin {
+	// Check the roles and display whatever data is necessary eg:
+	if userRoles.admin {
 		// This is an admin user display stuff
 		fmt.Fprintf(w, "Hi admin user")
-	} else if userRights.edit {
-		// This user has edit rights
+	} else if userRoles.edit {
+		// This user has edit roles
 		fmt.Fprintf(w, "Hi edit user")
-	} else if userRights.user {
+	} else if userRoles.user {
 		// This user is a normal user
 		fmt.Fprintf(w, "Hi ordinary user")
 	} else {
@@ -171,7 +168,7 @@ func SomeOtherHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 // Validate the cookie. Is the user logged in? What roles does he/she have?
 // This is a key function - apply this to all handlers
-func validateRequest(w * http.ResponseWriter, r *http.Request) (*UserRights, error) {
+func validateRequest(w * http.ResponseWriter, r *http.Request) (*UserRoles, error) {
 
 	cookie, err := r.Cookie(cookieName)
 	if err  != nil {
@@ -184,13 +181,13 @@ func validateRequest(w * http.ResponseWriter, r *http.Request) (*UserRights, err
 		return nil, err
 	}
 
-	rights, err := decrypt(encoded,key)
-	return rights, nil
+	roles, err := decrypt(encoded,key)
+	return roles, nil
 }
 
 
 // Decrypt the bytes, converting them back to to a struct
-func decrypt(ciphertext []byte, key []byte) (*UserRights, error) {
+func decrypt(ciphertext []byte, key []byte) (*UserRoles, error) {
 	c, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -210,8 +207,8 @@ func decrypt(ciphertext []byte, key []byte) (*UserRights, error) {
 	var decoded []byte
 	decoded, err = gcm.Open(nil, nonce, ciphertext, nil)
 
-	var userRights UserRights
-	err = json.Unmarshal(decoded,&userRights)
+	var userRoles UserRoles
+	err = json.Unmarshal(decoded,&userRoles)
 
 	if err != nil {
 		// This should lead to the display of an error page
@@ -219,7 +216,7 @@ func decrypt(ciphertext []byte, key []byte) (*UserRights, error) {
 		return nil, err;
 	}
 
-	return &userRights,nil
+	return &userRoles,nil
 }
 
 
