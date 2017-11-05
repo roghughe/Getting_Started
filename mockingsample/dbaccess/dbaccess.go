@@ -9,7 +9,7 @@ package dbaccess
 
 import "fmt"
 
-// This is the real DB Connection details.
+// The real DB Connection details.
 type RealConnection struct {
 
 	host string // The DB host to connect to
