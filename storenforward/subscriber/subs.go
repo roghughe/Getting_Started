@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -17,6 +18,7 @@ import (
 const (
 	PATTERN = "/forward"
 	PORT    = 7868
+	TOPIC   = "Bernie"
 )
 
 var (
@@ -55,15 +57,17 @@ To subscribe, the caller must:
 3) the return URL pattern
 
 The subscriber must know how to unmarshall the message
-In the real world the use of a 'topic' is also normal
 */
 func subscribe() bool {
 
-	id := randomSeq.Intn(100)
-	url := "http://localhost:" + strconv.Itoa(PORT) + "/subscribe?id=" + strconv.Itoa(id) + "&port=" + strconv.Itoa(port)
-	fmt.Printf("Subscribing with %s\n", url)
+	u, err := createURL()
+	if err != nil {
+		return false
+	}
 
-	response, err := http.Get(url)
+	fmt.Printf("Subscribing with %s\n", u)
+
+	response, err := http.Get(u)
 	if err != nil {
 		fmt.Printf("Subscribe error: %s - exiting.", err.Error())
 		return false
@@ -77,6 +81,28 @@ func subscribe() bool {
 	fmt.Println("Subscribed okay")
 	response.Body.Close()
 	return true
+}
+
+func createURL() (string, error) {
+
+	replyTo := "http://localhost:" + strconv.Itoa(port) + PATTERN + "?topic=" + TOPIC
+
+	sendTo, err := url.Parse("http://localhost:" + strconv.Itoa(PORT) + "/subscribe")
+	if err != nil {
+		fmt.Printf("Error parsing sendTo: %+v", err)
+		return "", err
+	}
+
+	parameters := url.Values{}
+	id := randomSeq.Intn(100)
+	parameters.Add("id", strconv.Itoa(id))
+	parameters.Add("topic", TOPIC)
+	parameters.Add("replyto", replyTo)
+	sendTo.RawQuery = parameters.Encode()
+
+	fmt.Printf("Encoded URL is %q\n", sendTo.String())
+
+	return sendTo.String(), nil
 }
 
 // Once subscribed, then the storenforward will send messages here

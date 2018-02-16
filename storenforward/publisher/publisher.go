@@ -11,13 +11,12 @@ import (
 )
 
 var (
-	counter int = 0 // The message number
+	counter = 0 // The message number
 )
 
 const (
 	CONTENT = "How do I send a JSON string in a POST request in Go"
-	NAME    = "Test"
-	URL     = "http://localhost:7868/message"
+	URL     = "http://localhost:7868/message?topic=Bernie"
 )
 
 func main() {
@@ -33,7 +32,6 @@ func main() {
 
 		// Create a message
 		msg := types.Message{
-			Name:    NAME,
 			Id:      counter,
 			Content: CONTENT,
 			Time:    time.Now(),
