@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"container/ring"
 	"errors"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 )
 
 type replyMsg struct {
@@ -24,17 +26,24 @@ type subscriber struct {
 
 type subscribers map[int]subscriber // All the subscribers, by id, for a topic
 
+// defines a ring (circular list) and a mutex to lock access to it
+type ringBuf struct {
+	buf *ring.Ring  // The ring buffer
+	mut *sync.Mutex // Something to lock access to the buffer...
+}
+
 const (
-	IN_PATTERN  = "/message"
-	SUB_PATTERN = "/subscribe"
+	IN_PATTERN  = "/message"   // URL used to receive the data
+	SUB_PATTERN = "/subscribe" // URL used to subscribe to the data
 	PORT        = ":7868"
-	BAD_REQUEST = 400
+	BAD_REQUEST = 400 // Simple HTTP status code
+	BUFF_SIZE   = 40  // Allows us to keep this many messages in memory.
 )
 
 var (
 	submap = make(map[string]subscribers) // record the subscribers for a topic by id
-	strmap = make(map[string][]byte)      // record the data we're storing
 
+	strmap = make(map[string]ringBuf) // record the data we're storing
 )
 
 // This is the store and forward. To work it needs a list of clients (host names) In this simple example, the client must
@@ -50,7 +59,7 @@ func main() {
 	http.ListenAndServe(PORT, nil)
 }
 
-// This function does the store and forward
+// This function does the store and forward.
 func processIncomingMessage(w http.ResponseWriter, r *http.Request) {
 
 	// This optimisation ignores anything but POSTs
@@ -74,9 +83,34 @@ func processIncomingMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	strmap[topic] = body
+	addToStore(body, topic)
+	updateSubscribers(body, topic)
+	io.WriteString(w, "OK")
+}
 
-	// Now send the data to any clients.
+// Add the latest data to the store, lazily initialising the Ring ptr.
+func addToStore(body []byte, topic string) {
+
+	fmt.Printf("About to store bytes len: %d,  --- %v\n", len(body), body)
+
+	rb, ok := strmap[topic]
+	if !ok {
+		rb = ringBuf{
+			buf: ring.New(BUFF_SIZE),
+			mut: &sync.Mutex{},
+		}
+	}
+
+	rb.mut.Lock()
+	rb.buf.Value = body
+	r := rb.buf.Next()
+	rb.buf = r
+	strmap[topic] = rb
+	rb.mut.Unlock()
+}
+
+// Now send the data to any clients.
+func updateSubscribers(body []byte, topic string) {
 	subscribers := submap[topic]
 
 	for id, subs := range subscribers {
@@ -88,8 +122,6 @@ func processIncomingMessage(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("forwarding to : %d\n", id)
 		subs.ch <- msg
 	}
-
-	io.WriteString(w, "OK")
 }
 
 /*
@@ -151,17 +183,15 @@ func addSubscriber(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subs[id] = s
+
 	// start listening for messages
 	go s.forward()
 
+	// Send back existing data...
+	go updateWithExisting(topic, &s)
+
 	// Okay, so now we're subscribed....
 
-	// Send what's in the store
-	if val, ok := strmap[topic]; ok {
-		sendData(val, &s)
-	} else {
-		fmt.Println("No existing data... for topic")
-	}
 }
 
 // Read the messages from the channel and send on via HTTP.
@@ -191,7 +221,29 @@ func (s *subscriber) forward() {
 	}
 }
 
-// Send the message to the subscriber.
+// takes what we have and sends it to any new subscribers
+func updateWithExisting(topic string, s *subscriber) {
+	// Send what's in the store
+	if rb, ok := strmap[topic]; ok {
+		rb.mut.Lock()
+		defer rb.mut.Unlock()
+		if rb.buf.Len() > 0 {
+
+			// Iterate through the ring and send its contents
+			rb.buf.Do(func(val interface{}) {
+				if val != nil {
+					sendData(val.([]byte), s)
+				}
+			})
+		} else {
+			fmt.Println("Topic with an empty buffer???")
+		}
+	} else {
+		fmt.Println("No existing data... for topic")
+	}
+}
+
+// Send the message to the subscriber. The data is copied for thread safety.
 func sendData(body []byte, s *subscriber) {
 
 	rm := replyMsg{
